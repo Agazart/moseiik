@@ -1,9 +1,17 @@
-FROM rust:latest
+FROM rust:1.76-bullseye
 
-WORKDIR /moseiik
+RUN apt-get update && apt-get install -y wget unzip && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+RUN mkdir -p assets/images
+
+RUN wget -q https://nasext-vaader.insa-rennes.fr/ietr-vaader/moseiik_test_images.zip -O /tmp/images.zip && \
+    unzip -q /tmp/images.zip -d assets/ && \
+    rm /tmp/images.zip
+
+COPY Cargo.toml Cargo.lock* ./
 
 COPY . .
 
-RUN cargo build --release
-
-ENTRYPOINT ["cargo", "test", "--release", "--"]
+ENTRYPOINT [ "cargo", "test", "--release", "--" ]

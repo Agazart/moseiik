@@ -432,7 +432,7 @@ mod tests {
             // Images identiques
             assert_eq!(l1_neon(&a, &a), 0);
             // Images differentes
-            assert_eq!(l1_neon(&c, &d) > 0);
+            assert!(l1_neon(&c, &d) > 0);
             // Différence connue : |50 - 10| = 40 par sous-pixel.
             assert_eq!(l1_neon(&a, &b), 40 * NB_SUBPIXELS);
             // Version optimisée == version generic
