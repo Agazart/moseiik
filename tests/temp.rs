@@ -1,23 +1,69 @@
 #[cfg(test)]
 mod tests {
+    
+    use moseiik::{compute_mosaic, Options};
+    use image::io::Reader as ImageReader;
+    use std::fs;
+
+    fn run_integration_test(use_simd: bool, output_filename: &str) {
+        let options = Options {
+            image: "assets/kit.jpeg".to_string(),
+            output: output_filename.to_string(),
+            tiles: "assets/images".to_string(),
+            scaling: 1,
+            tile_size: 25,
+            remove_used: false,
+            verbose: false,
+            simd: use_simd,
+            num_thread: 1
+        };
+
+        // Exécution du processus
+        compute_mosaic(options);
+
+        // Chargement des images pour comparaison
+        let generated_image = ImageReader::open(output_filename)
+            .expect("Impossible d'ouvrir l'image générée")
+            .decode()
+            .unwrap()
+            .into_rgb8();
+
+        let ground_truth = ImageReader::open("assets/ground-truth-kit.png")
+            .expect("Impossible d'ouvrir l'image de vérité terrain (ground truth)")
+            .decode()
+            .unwrap()
+            .into_rgb8();
+
+        // Vérification image generer vs image de reference
+        assert!(
+            generated_image == ground_truth,
+            "L'image générée ne correspond pas à la vérité terrain !"
+        );
+
+        // Nettoyage du fichier temporaire
+        fs::remove_file(output_filename).unwrap();
+    }
+
+    // --- l1_x86_sse2 --------------------------------------------------------
     #[test]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     fn test_x86() {
-        // TODO
-        // test avx2 or sse2 if available
-        assert!(false);
+        // Teste le rendu global en utilisant les instructions SIMD SSE2
+        run_integration_test(true, "assets/out_x86_test.png");
     }
 
+    // --- l1_neon ------------------------------------------------------------
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn test_aarch64() {
-        //TODO
-        assert!(false);
+        // Teste le rendu global en utilisant les instructions SIMD NEON
+        run_integration_test(true, "assets/out_aarch64_test.png");
     }
 
+    // --- l1_generic ---------------------------------------------------------
     #[test]
     fn test_generic() {
-        //TODO
-        assert!(false);
+        // Teste le rendu global avec la fonction de calcul de distance générique
+        run_integration_test(false, "assets/out_generic_test.png");
     }
 }
