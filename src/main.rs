@@ -345,28 +345,104 @@ pub fn compute_mosaic(args: Options) {
 fn main() {
     let args = Options::parse();
     compute_mosaic(args);
+
 }
 
 #[cfg(test)]
+
 mod tests {
+    use super::*;
+    use image::Rgb;
+
+    // --- Creation des données  ------------------------------------------------------------
+    // Creation d'une image d'une seule coleur unis
+    fn united_image(width: u32, height: u32, color: [u8; 3]) -> RgbImage {
+        RgbImage::from_pixel(width, height, Rgb(color))
+       }
+
+    // Creation d'une image bruitée ou chaque pixel est different
+    fn noise_image(width: u32, height: u32, seed: u32) -> RgbImage {
+        RgbImage::from_fn(width, height, |x, y| {
+            Rgb([
+                ((x * 13 + y * 7 + seed) % 256) as u8,
+                ((x * 5 + y * 11) % 256) as u8,
+                ((x * y + seed * 3) % 256) as u8,
+            ])
+        })
+    }
+
+
+    /* 
+    Creation d'une vignette de W=5 * H=5, avec trois couleurs par pixel, nous avons donc 25 * 3 = 75 sous-pixels (octets)
+    on divise 75 par 16, ce qui nous donne 4.6875, on decoupe ca en quatre blocs entiers soit 64 octets et en un reste de 11 octets,
+    les 4 bloc entier passe en SMID et le reste passe dans une boucle manuel de reste
+    */ 
+
+    const W: u32 = 5;
+    const H: u32 = 5;
+    const NB_SUBPIXELS: i32 = (W * H * 3) as i32; // 75
+
+    // --- l1_generic ---------------------------------------------------------
+    #[test]
+    fn unit_test_generic() {
+        let a = united_image(W, H, [50, 50, 50]);
+        let b = united_image(W, H, [10, 10, 10]);
+        let c = noise_image(W, H, 1);
+        let d = noise_image(W, H, 2);
+      
+        // Images identiques
+        let mut diff = l1_generic(&a, &a);
+        assert_eq!(diff, 0);
+
+        // Images differentes
+        diff = l1_generic(&c, &d);
+        assert!(diff > 0);
+
+        // Différence connue : |50 - 10| = 40 par sous-pixel.
+        assert_eq!(l1_generic(&a, &b), 40 * NB_SUBPIXELS);
+    }
+
+    // --- l1_x86_sse2 --------------------------------------------------------
+
     #[test]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     fn unit_test_x86() {
-        // TODO
-        assert!(false);
+        let a = united_image(W, H, [50, 50, 50]);
+        let b = united_image(W, H, [10, 10, 10]);
+        let c = noise_image(W, H, 1);
+        let d = noise_image(W, H, 2);
+        unsafe {
+            // Images identiques
+            assert_eq!(l1_x86_sse2(&a, &a), 0);
+            // Images differentes
+            assert!(l1_x86_sse2(&c, &d) > 0);
+            // Différence connue : |50 - 10| = 40 par sous-pixel.
+            assert_eq!(l1_x86_sse2(&a, &b), 40 * NB_SUBPIXELS);
+            // Version optimisée == version generic
+            assert_eq!(l1_x86_sse2(&c, &d), l1_generic(&c, &d));
+        }
     }
+
+    // --- l1_neon ------------------------------------------------------------
 
     #[test]
     #[cfg(target_arch = "aarch64")]
     fn unit_test_aarch64() {
-        // TODO
-        assert!(false);
-    }
+        let a = united_image(W, H, [50, 50, 50]);
+        let b = united_image(W, H, [10, 10, 10]);
+        let c = noise_image(W, H, 1);
+        let d = noise_image(W, H, 2);
 
-    #[test]
-    fn unit_test_generic() {
-        // TODO
-        assert!(false);
+        unsafe {
+            // Images identiques
+            assert_eq!(l1_neon(&a, &a), 0);
+            // Images differentes
+            assert_eq!(l1_neon(&c, &d) > 0);
+            // Différence connue : |50 - 10| = 40 par sous-pixel.
+            assert_eq!(l1_neon(&a, &b), 40 * NB_SUBPIXELS);
+            // Version optimisée == version generic
+            assert_eq!(l1_neon(&c, &d), l1_generic(&c, &d));
+        }
     }
 
     // --- prepare_target -----------------------------------------------------
