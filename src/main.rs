@@ -444,4 +444,55 @@ mod tests {
             assert_eq!(l1_neon(&c, &d), l1_generic(&c, &d));
         }
     }
+
+    // --- prepare_target -----------------------------------------------------
+    #[test]
+    fn test_prepare_target() {
+        // fichier temporaire
+        let dummy_path = "test_target_temp.png";
+        // Image d'origine de 100x100
+        let img = RgbImage::new(100, 100);
+        img.save(dummy_path).unwrap();
+
+        let tile_size = Size { width: 15, height: 15 };
+        let scale = 2;
+        
+        // Rognage : 100 - (100 mod 15) = 100 - 10 = 90.
+        // Scale x2 : 90 * 2 = 180.
+        let result = prepare_target(dummy_path, scale, &tile_size).unwrap();
+        
+        assert_eq!(result.width(), 180);
+        assert_eq!(result.height(), 180);
+        
+        // Nettoyage du fichier temporaire
+        fs::remove_file(dummy_path).unwrap();
+    }
+
+    // --- prepare_tiles ------------------------------------------------------
+
+    #[test]
+    fn unit_test_prepare_tiles() {
+
+        // Dossier temporaire
+        let dummy_folder = "test_tiles_temp_dir";
+        fs::create_dir_all(dummy_folder).unwrap();
+
+        // Création de 2 fausses vignettes de 50x50
+        let img = RgbImage::new(50, 50);
+        img.save(format!("{}/tile1.png", dummy_folder)).unwrap();
+        img.save(format!("{}/tile2.png", dummy_folder)).unwrap();
+
+        let tile_size = Size { width: 25, height: 25 };
+        
+        // Exécution de la fonction
+        let tiles = prepare_tiles(dummy_folder, &tile_size, false).unwrap();
+        
+        // On vérifie qu'il y a bien 2 vignettes et qu'elles ont été réduites à 25x25
+        assert_eq!(tiles.len(), 2);
+        assert_eq!(tiles[0].width(), 25);
+        assert_eq!(tiles[0].height(), 25);
+
+        // Nettoyage du dossier temporaire
+        fs::remove_dir_all(dummy_folder).unwrap();
+    }
 }
