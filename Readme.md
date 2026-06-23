@@ -1,5 +1,10 @@
 # Projet Qualité Logiciel
 
+![Docker Tests](https://github.com/Agazart/moseiik/actions/workflows/docker-test.yml/badge.svg)
+![CodeQL](https://github.com/Agazart/moseiik/actions/workflows/codeql.yml/badge.svg)
+![Rust](https://img.shields.io/badge/Rust-Cargo-orange?logo=rust)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 Moseiik est un projet qui permet de générer des mosaïques d'images à partir d'un corpus de vignettes (appelées tiles) et d'une image de référence (appelée target).
 
 Le code source se trouve dans le fichier `src/main.rs` et peut être exécuté en lançant depuis le dossier `moseiik` la commande :
