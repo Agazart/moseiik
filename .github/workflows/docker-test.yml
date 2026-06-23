@@ -1,0 +1,55 @@
+name: Docker Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker-tests:
+
+    name: Docker tests (${{ matrix.architecture }})
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture:
+          - linux/amd64
+          - linux/arm64
+
+
+    steps:
+
+      # Récupération du code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      # Activation QEMU pour ARM
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+
+      # Installation de Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+
+      # Construction de l'image
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.architecture }}
+          tags: moseiik-test
+
+
+      # Exécution des tests
+      - name: Run tests
+        run: |
+          docker run --platform ${{ matrix.architecture }} moseiik-test
