@@ -15,7 +15,7 @@ mod tests {
             remove_used: false,
             verbose: false,
             simd: use_simd,
-            num_thread: 1
+            num_thread: 1,
         };
 
         // Exécution du processus
