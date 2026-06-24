@@ -66,7 +66,11 @@ fn count_available_tiles(images_folder: &str) -> i32 {
     };
 }
 
-fn prepare_tiles(images_folder: &str, tile_size: &Size, verbose: bool) -> Result<Vec<RgbImage>, Box<dyn Error>> {
+fn prepare_tiles(
+    images_folder: &str,
+    tile_size: &Size,
+    verbose: bool,
+) -> Result<Vec<RgbImage>, Box<dyn Error>> {
     let image_paths = fs::read_dir(images_folder)?;
     let tiles = Arc::new(Mutex::new(Vec::new()));
     let now = Instant::now();
@@ -77,8 +81,9 @@ fn prepare_tiles(images_folder: &str, tile_size: &Size, verbose: bool) -> Result
     for image_path in image_paths {
         let tiles = Arc::clone(&tiles);
         pool.execute(move || {
-            let tile_result =
-                || -> Result<RgbImage, Box<dyn Error>> { Ok(ImageReader::open(image_path?.path())?.decode()?.into_rgb8()) };
+            let tile_result = || -> Result<RgbImage, Box<dyn Error>> {
+                Ok(ImageReader::open(image_path?.path())?.decode()?.into_rgb8())
+            };
 
             let tile = match tile_result() {
                 Ok(t) => t,
@@ -134,8 +139,10 @@ unsafe fn l1_x86_sse2(im1: &RgbImage, im2: &RgbImage) -> i32 {
 
     for i in (0..nb_sub_pixel - stride).step_by(stride as usize) {
         // Get pointer to data
-        let p_im1: *const __m128i = std::mem::transmute::<*const u8, *const __m128i>(std::ptr::addr_of!(im1[i as usize]));
-        let p_im2: *const __m128i = std::mem::transmute::<*const u8, *const __m128i>(std::ptr::addr_of!(im2[i as usize]));
+        let p_im1: *const __m128i =
+            std::mem::transmute::<*const u8, *const __m128i>(std::ptr::addr_of!(im1[i as usize]));
+        let p_im2: *const __m128i =
+            std::mem::transmute::<*const u8, *const __m128i>(std::ptr::addr_of!(im2[i as usize]));
 
         // Load data to xmm
         let xmm_p1 = _mm_load_si128(p_im1);
@@ -252,14 +259,28 @@ fn l1(im1: &RgbImage, im2: &RgbImage, simd_flag: bool, verbose: bool) -> i32 {
     return unsafe { get_optimal_l1(simd_flag, verbose)(im1, im2) };
 }
 
-fn prepare_target(image_path: &str, scale: u32, tile_size: &Size) -> Result<RgbImage, Box<dyn Error>> {
+fn prepare_target(
+    image_path: &str,
+    scale: u32,
+    tile_size: &Size,
+) -> Result<RgbImage, Box<dyn Error>> {
     let target = ImageReader::open(image_path)?.decode()?.into_rgb8();
     let width = target.width();
     let height = target.height();
     let target = target
-        .view(0, 0, width - width % tile_size.width, height - height % tile_size.height)
+        .view(
+            0,
+            0,
+            width - width % tile_size.width,
+            height - height % tile_size.height,
+        )
         .to_image();
-    Ok(resize(&target, target.width() * scale, target.height() * scale, Nearest))
+    Ok(resize(
+        &target,
+        target.width() * scale,
+        target.height() * scale,
+        Nearest,
+    ))
 }
 
 fn find_best_tile(target: &RgbImage, tiles: &Vec<RgbImage>, simd: bool, verbose: bool) -> usize {
@@ -293,9 +314,13 @@ pub fn compute_mosaic(args: Options) {
     };
 
     let nb_available_tiles = count_available_tiles(&args.tiles);
-    let nb_required_tiles: i32 = ((target_size.width / tile_size.width) * (target_size.height / tile_size.height)) as i32;
+    let nb_required_tiles: i32 =
+        ((target_size.width / tile_size.width) * (target_size.height / tile_size.height)) as i32;
     if args.remove_used && nb_required_tiles > nb_available_tiles {
-        panic!("{} tiles required, found {}.", nb_required_tiles, nb_available_tiles)
+        panic!(
+            "{} tiles required, found {}.",
+            nb_required_tiles, nb_available_tiles
+        )
     }
 
     let tiles = &prepare_tiles(&args.tiles, &tile_size, args.verbose).unwrap();
@@ -324,15 +349,25 @@ pub fn compute_mosaic(args: Options) {
                     let target_tile = &(target
                         .lock()
                         .unwrap()
-                        .view(tile_size.width * w, tile_size.height * h, tile_size.width, tile_size.height)
+                        .view(
+                            tile_size.width * w,
+                            tile_size.height * h,
+                            tile_size.width,
+                            tile_size.height,
+                        )
                         .to_image());
 
-                    let index_best_tile = find_best_tile(&target_tile, &tiles, args.simd, args.verbose);
+                    let index_best_tile =
+                        find_best_tile(&target_tile, &tiles, args.simd, args.verbose);
 
                     target
                         .lock()
                         .unwrap()
-                        .copy_from(&tiles[index_best_tile], w * tile_size.width, h * tile_size.height)
+                        .copy_from(
+                            &tiles[index_best_tile],
+                            w * tile_size.width,
+                            h * tile_size.height,
+                        )
                         .unwrap();
                 }
             });
@@ -341,7 +376,6 @@ pub fn compute_mosaic(args: Options) {
     println!("\n{} seconds", now.elapsed().as_millis() as f32 / 1000.0);
     target.lock().unwrap().save(args.output).unwrap();
 }
-
 
 #[cfg(test)]
 
@@ -353,7 +387,7 @@ mod tests {
     // Creation d'une image d'une seule coleur unis
     fn united_image(width: u32, height: u32, color: [u8; 3]) -> RgbImage {
         RgbImage::from_pixel(width, height, Rgb(color))
-       }
+    }
 
     // Creation d'une image bruitée ou chaque pixel est different
     fn noise_image(width: u32, height: u32, seed: u32) -> RgbImage {
@@ -366,12 +400,11 @@ mod tests {
         })
     }
 
-
-    /* 
+    /*
     Creation d'une vignette de W=5 * H=5, avec trois couleurs par pixel, nous avons donc 25 * 3 = 75 sous-pixels (octets)
     on divise 75 par 16, ce qui nous donne 4.6875, on decoupe ca en quatre blocs entiers soit 64 octets et en un reste de 11 octets,
     les 4 bloc entier passe en SMID et le reste passe dans une boucle manuel de reste
-    */ 
+    */
 
     const W: u32 = 5;
     const H: u32 = 5;
@@ -384,7 +417,7 @@ mod tests {
         let b = united_image(W, H, [10, 10, 10]);
         let c = noise_image(W, H, 1);
         let d = noise_image(W, H, 2);
-      
+
         // Images identiques
         let mut diff = l1_generic(&a, &a);
         assert_eq!(diff, 0);
@@ -449,16 +482,19 @@ mod tests {
         let img = RgbImage::new(100, 100);
         img.save(dummy_path).unwrap();
 
-        let tile_size = Size { width: 15, height: 15 };
+        let tile_size = Size {
+            width: 15,
+            height: 15,
+        };
         let scale = 2;
-        
+
         // Rognage : 100 - (100 mod 15) = 100 - 10 = 90.
         // Scale x2 : 90 * 2 = 180.
         let result = prepare_target(dummy_path, scale, &tile_size).unwrap();
-        
+
         assert_eq!(result.width(), 180);
         assert_eq!(result.height(), 180);
-        
+
         // Nettoyage du fichier temporaire
         fs::remove_file(dummy_path).unwrap();
     }
@@ -467,7 +503,6 @@ mod tests {
 
     #[test]
     fn unit_test_prepare_tiles() {
-
         // Dossier temporaire
         let dummy_folder = "test_tiles_temp_dir";
         fs::create_dir_all(dummy_folder).unwrap();
@@ -477,11 +512,14 @@ mod tests {
         img.save(format!("{}/tile1.png", dummy_folder)).unwrap();
         img.save(format!("{}/tile2.png", dummy_folder)).unwrap();
 
-        let tile_size = Size { width: 25, height: 25 };
-        
+        let tile_size = Size {
+            width: 25,
+            height: 25,
+        };
+
         // Exécution de la fonction
         let tiles = prepare_tiles(dummy_folder, &tile_size, false).unwrap();
-        
+
         // On vérifie qu'il y a bien 2 vignettes et qu'elles ont été réduites à 25x25
         assert_eq!(tiles.len(), 2);
         assert_eq!(tiles[0].width(), 25);

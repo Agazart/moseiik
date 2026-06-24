@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    
-    use moseiik::{compute_mosaic, Options};
+
     use image::io::Reader as ImageReader;
+    use moseiik::{compute_mosaic, Options};
     use std::fs;
 
     fn run_integration_test(use_simd: bool, output_filename: &str) {
@@ -28,16 +28,16 @@ mod tests {
             .unwrap()
             .into_rgb8();
 
-        let ground_truth = ImageReader::open("assets/out.png")
-            .expect("Impossible d'ouvrir l'image de vérité terrain (ground truth)")
+        let refered_image = ImageReader::open("assets/out.png")
+            .expect("Impossible d'ouvrir l'image de référence")
             .decode()
             .unwrap()
             .into_rgb8();
 
         // Vérification image generer vs image de reference
         assert!(
-            generated_image == ground_truth,
-            "L'image générée ne correspond pas à la vérité terrain !"
+            generated_image == refered_image,
+            "L'image générée ne correspond pas à l'image de référence !"
         );
 
         // Nettoyage du fichier temporaire
