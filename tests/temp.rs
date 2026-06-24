@@ -11,7 +11,7 @@ mod tests {
             output: output_filename.to_string(),
             tiles: "assets/images".to_string(),
             scaling: 1,
-            tile_size: 25,
+            tile_size: 5,
             remove_used: false,
             verbose: false,
             simd: use_simd,
@@ -28,7 +28,7 @@ mod tests {
             .unwrap()
             .into_rgb8();
 
-        let ground_truth = ImageReader::open("assets/ground-truth-kit.png")
+        let ground_truth = ImageReader::open("assets/out.png")
             .expect("Impossible d'ouvrir l'image de vérité terrain (ground truth)")
             .decode()
             .unwrap()
